@@ -63,3 +63,7 @@ Precios orientativos a octubre de 2026; revísalos en cada web antes de lanzar c
 ---
 
 **English:** Turn a YouTube channel into a library of AI summaries. Fetches native captions with Supadata (`@supadata/js` SDK or n8n HTTP nodes) and summarizes each video with any OpenRouter model. Includes an importable n8n workflow and a Node.js script. MIT licensed.
+
+---
+
+> **Aviso:** los enlaces a Supadata de este repositorio son mi enlace de referido. Si te registras con él, recibo créditos gratuitos de Supadata; a ti no te cuesta nada más.

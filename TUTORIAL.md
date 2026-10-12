@@ -212,3 +212,7 @@ Para un canal de 200 vídeos, menos de 1 $ de IA.
 - Programarlo una vez por semana para que la biblioteca se actualice sola.
 
 Si lo usas o lo mejoras, ¡abre un issue o una pull request!
+
+---
+
+> **Aviso:** los enlaces a Supadata de este repositorio son mi enlace de referido. Si te registras con él, recibo créditos gratuitos de Supadata; a ti no te cuesta nada más.
