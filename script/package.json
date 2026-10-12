@@ -1,0 +1,15 @@
+{
+  "name": "youtube-canal-a-resumenes-ia",
+  "version": "1.0.0",
+  "description": "Saca los subtítulos de los vídeos de un canal de YouTube con Supadata y los resume con IA.",
+  "type": "module",
+  "main": "index.mjs",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@supadata/js": "^1.4.0",
+    "dotenv": "^16.4.5"
+  }
+}

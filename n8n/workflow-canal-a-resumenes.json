@@ -1,0 +1,432 @@
+{
+  "name": "YouTube canal → resúmenes con IA (Supadata + OpenRouter)",
+  "nodes": [
+    {
+      "id": "beb8b324-60d3-4ad1-b1b7-eb169d29ef4a",
+      "name": "Empezar",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "de8ab94a-e08e-4199-aa1b-743ab2219ca1",
+      "name": "Configuración",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        300
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c2fa32cc-76b1-48fd-818d-8474ba028ca2",
+              "name": "canal",
+              "value": "@supadata",
+              "type": "string"
+            },
+            {
+              "id": "5d0d1ecf-c77b-4a56-ada1-dcffc056a74c",
+              "name": "limite",
+              "value": 5,
+              "type": "number"
+            },
+            {
+              "id": "f928d874-7179-4cad-8418-1ee848fff506",
+              "name": "idioma",
+              "value": "es",
+              "type": "string"
+            },
+            {
+              "id": "9db65d1d-7849-4e0c-b222-f6973863083e",
+              "name": "modelo",
+              "value": "anthropic/claude-haiku-5.5",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "0eb0a5f9-54e9-47d3-9757-c83e89f02699",
+      "name": "Vídeos del canal (Supadata)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.supadata.ai/v1/youtube/channel/videos",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ $json.canal }}"
+            },
+            {
+              "name": "type",
+              "value": "video"
+            },
+            {
+              "name": "limit",
+              "value": "={{ $json.limite }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "6ed42b53-ee7a-425f-be6d-b3f5ddceeb33",
+      "name": "Un elemento por vídeo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const cfg = $('Configuración').first().json;\nconst ids = $input.first().json.videoIds || [];\nreturn ids.map(id => ({ json: { videoId: id, idioma: cfg.idioma, modelo: cfg.modelo } }));"
+      }
+    },
+    {
+      "id": "28fa1c85-de9d-4e63-a613-19046edde3cb",
+      "name": "De uno en uno",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        880,
+        300
+      ],
+      "parameters": {
+        "options": {}
+      }
+    },
+    {
+      "id": "eccf7639-01d6-4f91-8875-f1c5ccde6364",
+      "name": "Subtítulos (Supadata)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        400
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.supadata.ai/v1/transcript",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ 'https://www.youtube.com/watch?v=' + $json.videoId }}"
+            },
+            {
+              "name": "lang",
+              "value": "={{ $json.idioma }}"
+            },
+            {
+              "name": "text",
+              "value": "true"
+            },
+            {
+              "name": "mode",
+              "value": "native"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "43b086ad-c46e-43cd-804d-ebd2f25ee0a7",
+      "name": "Preparar texto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        400
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const v = $('De uno en uno').first().json;\nconst r = $input.first().json || {};\nconst b = r.body || {};\nconst texto = (r.statusCode === 200 && typeof b.content === 'string') ? b.content.replace(/\\s+/g, ' ').trim() : '';\nreturn [{ json: { videoId: v.videoId, modelo: v.modelo, idioma: b.lang || '', texto, motivo: texto ? '' : 'sin subtítulos (' + (r.statusCode || '?') + ')' } }];"
+      }
+    },
+    {
+      "id": "6d32a6d6-04f4-4acd-a32f-7daa6bd12931",
+      "name": "¿Hay texto?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1540,
+        400
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "950b735d-fa5f-462c-a439-667377093dd8",
+              "leftValue": "={{ $json.texto.length }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "500cc39d-9784-458d-9bee-f7110311009b",
+      "name": "Resumir (OpenRouter)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $json.modelo, max_tokens: 3000, temperature: 0.3, messages: [ { role: 'system', content: \"Eres un analista. Resumes v\\u00eddeos de YouTube para construir una biblioteca de conocimiento.\\nReglas: escribe en espa\\u00f1ol con tus propias palabras; guarda los n\\u00fameros concretos; prioriza las decisiones con su contexto (qu\\u00e9 se decidi\\u00f3, en qu\\u00e9 situaci\\u00f3n y qu\\u00e9 resultado tuvo); si el v\\u00eddeo tiene poco contenido \\u00fatil, dilo en una l\\u00ednea; m\\u00e1ximo unas 800 palabras.\\nEstructura (markdown): ## De qu\\u00e9 va / ## Tesis principal / ## Principios y reglas / ## Decisiones y casos reales / ## T\\u00e1cticas concretas / ## Lo que critica o desaconseja\" }, { role: 'user', content: 'Vídeo: https://youtu.be/' + $json.videoId + '\\nTranscripción automática:\\n' + $json.texto } ] }) }}",
+        "options": {
+          "timeout": 180000
+        }
+      }
+    },
+    {
+      "id": "cc457193-e411-4659-a245-8b8d9a9bd677",
+      "name": "Resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const v = $('Preparar texto').first().json;\nconst j = $input.first().json || {};\nconst resumen = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content || '';\n// Guarda aquí el resumen donde quieras (Google Sheets, Notion, una tabla de n8n...)\nreturn [{ json: { videoId: v.videoId, url: 'https://youtu.be/' + v.videoId, idioma: v.idioma, resumen } }];"
+      }
+    },
+    {
+      "id": "746e9ec6-5bde-43e3-b3ba-b83aa38fdd4a",
+      "name": "Pausa",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2200,
+        400
+      ],
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "4046ecb1-0a3b-456c-89e9-57fcade40078",
+      "name": "Terminado",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        180
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "0557a643-d089-492a-b07e-e51f63b435df",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        20
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 240,
+        "content": "## YouTube canal → resúmenes con IA\n1. Crea dos credenciales **Header Auth**:\n   - Supadata → Name `x-api-key`, Value: tu clave de Supadata\n   - OpenRouter → Name `Authorization`, Value: `Bearer TU_CLAVE`\n2. Asígnalas a los nodos HTTP (Supadata a los dos de Supadata, OpenRouter al de resumir).\n3. Cambia el canal y el límite en **Configuración** y pulsa *Execute workflow*.\n\nSolo usa subtítulos existentes (`mode=native`, 1 crédito por vídeo)."
+      }
+    }
+  ],
+  "connections": {
+    "Empezar": {
+      "main": [
+        [
+          {
+            "node": "Configuración",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuración": {
+      "main": [
+        [
+          {
+            "node": "Vídeos del canal (Supadata)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vídeos del canal (Supadata)": {
+      "main": [
+        [
+          {
+            "node": "Un elemento por vídeo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Un elemento por vídeo": {
+      "main": [
+        [
+          {
+            "node": "De uno en uno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "De uno en uno": {
+      "main": [
+        [
+          {
+            "node": "Terminado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Subtítulos (Supadata)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subtítulos (Supadata)": {
+      "main": [
+        [
+          {
+            "node": "Preparar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar texto": {
+      "main": [
+        [
+          {
+            "node": "¿Hay texto?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay texto?": {
+      "main": [
+        [
+          {
+            "node": "Resumir (OpenRouter)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pausa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumir (OpenRouter)": {
+      "main": [
+        [
+          {
+            "node": "Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resultado": {
+      "main": [
+        [
+          {
+            "node": "Pausa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pausa": {
+      "main": [
+        [
+          {
+            "node": "De uno en uno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
