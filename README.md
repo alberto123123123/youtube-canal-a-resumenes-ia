@@ -1,6 +1,6 @@
 # YouTube canal → resúmenes con IA
 
-Convierte los vídeos de un canal de YouTube en una **biblioteca de resúmenes**: saca los subtítulos con [Supadata](https://supadata.ai) y los resume con IA (cualquier modelo de [OpenRouter](https://openrouter.ai), por defecto Claude Haiku 5.5).
+Convierte los vídeos de un canal de YouTube en una **biblioteca de resúmenes**: saca los subtítulos con [Supadata](https://supadata.ai/r/PW6R32X4) y los resume con IA (cualquier modelo de [OpenRouter](https://openrouter.ai), por defecto Claude Haiku 5.5).
 
 Útil para estudiar a fondo a un experto, a un mentor o a la competencia sin ver cientos de horas de vídeo: cada resumen guarda la tesis, las reglas con sus números y, sobre todo, **las decisiones que tomaron, con su contexto y su resultado**.
 
