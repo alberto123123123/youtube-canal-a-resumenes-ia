@@ -9,7 +9,7 @@ Todo el código está en este repositorio. Aquí explico cómo funciona y por qu
 ## Lo que necesitas
 
 - **Node.js 18 o superior.**
-- Una **clave de Supadata** (el plan gratis trae 100 créditos al mes; cada vídeo con subtítulos cuesta 1).
+- Una **clave de Supadata**. Créate la cuenta aquí: https://supadata.ai/r/PW6R32X4 (el plan gratis trae 100 créditos al mes; cada vídeo con subtítulos cuesta 1). La clave está en tu panel de Supadata, en «API key».
 - Una **clave de OpenRouter**, para usar el modelo de IA que quieras con la misma API. Con Claude Haiku 5.5 cada resumen cuesta entre 0,002 y 0,005 $.
 
 ## Por qué no sacar los subtítulos directamente de YouTube
@@ -102,7 +102,40 @@ El truco está en las instrucciones. Un «resúmeme esto» da resúmenes genéri
 
 Con una estructura fija, todos los resúmenes se pueden comparar entre sí, y luego es fácil juntar los de un mismo autor en un documento de «doctrina»: qué defiende, con qué números y en qué no está de acuerdo con otros.
 
-La llamada a OpenRouter es un `fetch` normal (mira `script/index.mjs`). Puedes cambiar de modelo solo con la variable `MODELO`.
+La llamada a OpenRouter es un `fetch` normal. Este es el trozo de `script/index.mjs` que manda el texto a la IA y devuelve el resumen:
+
+```js
+async function resumir(videoId, texto, idioma) {
+  const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: process.env.MODELO || 'anthropic/claude-haiku-5.5',
+      max_tokens: 3000,
+      temperature: 0.3,
+      messages: [
+        { role: 'system', content: INSTRUCCIONES },   // las reglas y la estructura de arriba
+        { role: 'user', content: `Vídeo: https://youtu.be/${videoId}\nIdioma: ${idioma}\n\nTranscripción:\n${texto}` }
+      ]
+    })
+  });
+  const j = await r.json();
+  const contenido = j?.choices?.[0]?.message?.content;
+  if (!contenido) throw new Error('La IA no ha respondido: ' + (j?.error?.message || r.status));
+  return contenido;
+}
+```
+
+`temperature: 0.3` hace que los resúmenes sean más fieles y menos «creativos». Puedes cambiar de modelo solo con la variable `MODELO`.
+
+Al final, cada resumen se guarda en un archivo:
+
+```js
+await writeFile(`resumenes/${id}.md`, `# https://youtu.be/${id}\n\n${resumen}\n`);
+```
 
 ## Paso 5: ejecutar
 
@@ -111,6 +144,51 @@ npm start
 ```
 
 Verás una línea por vídeo (`✓` resumido, `✗` error, o «sin subtítulos») y los resúmenes en `script/resumenes/`, un `.md` por vídeo.
+
+```text
+Canal @nombredelcanal: 5 vídeos a procesar
+✓ n8u5wn-fsVk resumido
+✓ 0cXVK49cJP8 resumido
+- abc123xyz00: sin subtítulos, se salta
+...
+Hecho. Los resúmenes están en la carpeta resumenes/
+```
+
+## Ejemplo de resultado
+
+Así queda un resumen real (recortado), generado con este sistema a partir de un vídeo de 11 minutos sobre los consultores que hay detrás de los grandes infoproductores (https://youtu.be/n8u5wn-fsVk):
+
+```markdown
+# https://youtu.be/n8u5wn-fsVk
+
+## Tesis principal
+Copiar lo que enseñan los grandes infoproductores no sirve: lo que les dio
+resultado fueron decisiones concretas tomadas en un contexto y con unas métricas
+específicas. Las palancas que más pesan suelen ser de conversión, timing y
+embudo, no de cantidad de contenido.
+
+## Principios y reglas
+- Estudiar las decisiones y sus métricas, no el discurso público del creador.
+- Un consultor externo ve lo que el dueño no ve desde dentro del día a día.
+- Antes de producir más contenido, mirar las métricas de cada área del embudo
+  por separado.
+
+## Decisiones y casos reales
+- Lanzamiento a 29 días de la fecha. Decisiones: quitar la superproducción y
+  pasar a diapositivas sencillas; subir el precio de unos 1.000 a 1.500 $ y
+  anunciarlo en el propio evento; vender el día 2 en vez del día 4 porque se
+  perdía retención. Resultado según el vídeo: ~10 millones, repetido tres
+  veces ese año.
+- Estancados en 500.000 al mes: al medir cada área vieron que solo contactaban
+  al 22 % de quienes entraban al embudo. El problema era de conversión, no de
+  contenido.
+
+## Tácticas concretas
+1. Revisar las métricas por fase del embudo antes de decidir qué cambiar.
+2. Probar cambios baratos y de alto impacto: fecha de venta, precio, formato.
+```
+
+Fíjate en que guarda los números y separa **contexto → decisión → resultado**: eso es lo que luego permite comparar a distintos autores.
 
 ## Lo mismo sin código: n8n
 
