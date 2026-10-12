@@ -4,6 +4,8 @@ Convierte los vídeos de un canal de YouTube en una **biblioteca de resúmenes**
 
 Útil para estudiar a fondo a un experto, a un mentor o a la competencia sin ver cientos de horas de vídeo: cada resumen guarda la tesis, las reglas con sus números y, sobre todo, **las decisiones que tomaron, con su contexto y su resultado**.
 
+<a href="https://supadata.ai/r/PW6R32X4" rel="sponsored" target="_blank"><img src="https://supadata.ai/badge/powered-by-supadata-light.svg" alt="Powered by Supadata" width="232" height="54" /></a>
+
 📖 **Tutorial paso a paso:** [TUTORIAL.md](TUTORIAL.md)
 
 Viene en dos versiones, elige la que te encaje:
